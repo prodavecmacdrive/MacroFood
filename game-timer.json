@@ -1,0 +1,87 @@
+{
+  "_comment": "Stopwatch timer settings. gameFinalTime is in centiseconds (1/100 s) — 3000 = 30 s.",
+  "gameFinalTime": 0,
+  "depth": 10,
+  "globalScale": 0.3,
+  "container": {
+    "portraitX": -50,
+    "portraitY": 70,
+    "landscapeX": -120,
+    "landscapeY": 140,
+    "align": "Top Rigth"
+  },
+  "timerScale": {
+    "portrait": 0.7,
+    "landscape": 1.2
+  },
+  "bg": {
+    "depth": 0
+  },
+  "clockCenterOffsetY": 50,
+  "text": {
+    "offsetX": -15,
+    "offsetY": 16,
+    "fontFamily": "tt rounds neue trial bold",
+    "fontSize": 268,
+    "color": "#f51f1f",
+    "stroke": "#999999",
+    "strokeThickness": 2,
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "alpha": 0.5,
+    "depth": 5,
+    "twitchScale": 1.15,
+    "twitchDurationMs": 80
+  },
+  "appearance": {
+    "initialScale": 1,
+    "overshootScale": 1.08,
+    "fadeDurationMs": 280,
+    "bounceDurationMs": 260,
+    "repositionDurationMs": 420,
+    "repositionEase": "Power2"
+  },
+  "finalCountdown": {
+    "centerOffsetX": 0,
+    "centerOffsetY": 0,
+    "zoomScaleMultiplier": 2.2,
+    "zoomDurationMs": 260,
+    "zoomEase": "Back.Out",
+    "timeoutSequenceDurationMs": 1000,
+    "timeoutPulseScaleMultiplier": 1.16,
+    "timeoutPulseEase": "Sine.InOut",
+    "timeoutTextScaleMultiplier": 1.2,
+    "timeoutTwitchAngleDeg": 8,
+    "timeoutFadeDurationMs": 260,
+    "timeoutFadeEase": "Linear",
+    "failSoundVolume": 1
+  },
+  "warning": {
+    "thresholdSeconds": 10,
+    "blinkColor": "#fbcdcd",
+    "blinkDurationMs": 150,
+    "twitchScale": 1.13,
+    "twitchDurationMs": 120,
+    "rotationAngleDeg": 5,
+    "rotationStepDurationMs": 50,
+    "rotationSteps": 40
+  },
+  "btn": {
+    "offsetX": -26,
+    "topOffsetY": 16,
+    "pressOffsetY": 8,
+    "pressDurationMs": 100,
+    "pressRotationDeg": -0.6,
+    "pressRotationDurationMs": 120,
+    "depth": 2
+  },
+  "arrowS": {
+    "offsetX": -24.5,
+    "offsetY": -18,
+    "depth": 4
+  },
+  "arrowMs": {
+    "offsetX": -24.5,
+    "offsetY": -104,
+    "depth": 3
+  }
+}

@@ -1,0 +1,28 @@
+# Node modules
+node_modules/
+
+# Build output
+dist/
+
+# Temporary build files
+temp/
+
+# Local environment / editor files
+.DS_Store
+Thumbs.db
+.vscode/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+*.log
+
+# FFmpeg and audio scratch files
+*.mp4
+*.mov
+
+# Ignore package lock if package manager lockfiles are not committed
+package-lock.json

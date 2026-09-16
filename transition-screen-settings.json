@@ -1,0 +1,27 @@
+{
+  "background": {
+    "color": "#000000",
+    "alpha": 1
+  },
+  "sceneButtonMap": {
+    "scene-1": "button_texture",
+    "scene-2": "button_texture",
+    "scene-3": "button_texture"
+  },
+  "sceneButtonLabels": {
+    "scene-1": "Level 1",
+    "scene-2": "Level 2",
+    "scene-3": "Level 3"
+  },
+  "title": {
+    "text": "Choose level",
+    "y": -200,
+    "fontFamily": "tt rounds neue trial bold",
+    "fontSize": "40px",
+    "color": "#ffffff"
+  },
+  "buttons": {
+    "y": 100,
+    "spacing": 150
+  }
+}
