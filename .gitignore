@@ -26,3 +26,4 @@ yarn-error.log*
 
 # Ignore package lock if package manager lockfiles are not committed
 package-lock.json
+
