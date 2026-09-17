@@ -71,38 +71,17 @@ export class ConveyorSystem extends System {
                     const half = size * 0.5;
                     let cx = tr.curX;
                     let cy = tr.curY;
-                    if (tr.targetContainer && tr.targetContainer.active && tr.targetContainer !== this.game.mainContainer) {
-                        cx += tr.targetContainer.x;
-                        cy += tr.targetContainer.y;
-                    }
+                    g.save();
+                    g.translate(cx, cy);
+                    g.rotate(tr.currentRotation || 0);
 
-                    const angle = tr.currentRotation || 0;
-                    const cosA = Math.cos(angle);
-                    const sinA = Math.sin(angle);
-
-                    // Helper to rotate a point
-                    const rotX = (px, py) => cx + px * cosA - py * sinA;
-                    const rotY = (px, py) => cy + px * sinA + py * cosA;
-
-                    // Draw dark half (bottom: x from -half to half, y from 0 to half)
                     g.fillStyle(darkColor, 1);
-                    g.beginPath();
-                    g.moveTo(rotX(-half, 0), rotY(-half, 0));
-                    g.lineTo(rotX(-half + size, 0), rotY(-half + size, 0));
-                    g.lineTo(rotX(-half + size, half), rotY(-half + size, half));
-                    g.lineTo(rotX(-half, half), rotY(-half, half));
-                    g.closePath();
-                    g.fillPath();
-
-                    // Draw bright half (top: x from -half to half, y from -half to 0)
+                    g.fillRect(-half, 0, size, half);
                     g.fillStyle(dropColor, 1);
-                    g.beginPath();
-                    g.moveTo(rotX(-half, -half), rotY(-half, -half));
-                    g.lineTo(rotX(-half + size, -half), rotY(-half + size, -half));
-                    g.lineTo(rotX(-half + size, 0), rotY(-half + size, 0));
-                    g.lineTo(rotX(-half, 0), rotY(-half, 0));
-                    g.closePath();
-                    g.fillPath();
+                    g.fillRect(-half, -half, size, half);
+
+                    g.restore();
+
 
                 }
             }
@@ -370,8 +349,9 @@ export class ConveyorSystem extends System {
         conveyor.pathRightX = straightSpan * scale;
     }
 
-    addParticleToConveyor(conveyor, logicalX, colorInt, colorHex) {
-        const cx = Math.max(conveyor.pathLeftX + 5, Math.min(conveyor.pathRightX - 5, logicalX - conveyor.x));
+    addParticleToConveyor(conveyor, localX, colorInt, colorHex) {
+        // Here localX is already relative to conveyor.x
+        const cx = Math.max(conveyor.pathLeftX + 5, Math.min(conveyor.pathRightX - 5, localX));
 
         const pInfo = this.game && this.game.getParticleSize ? this.game.getParticleSize() : null;
         const pSize = pInfo ? pInfo.logicalSize : 5.0;
@@ -562,15 +542,12 @@ export class ConveyorSystem extends System {
 
         const randomAngle = (Math.random() - 0.5) * (Math.PI * 0.5);
 
+        // We now render everything inside conveyor.batchGraphics (local space)
         const potWorldX = pot.x;
-        const localStartX = (targetContainer !== this.game.mainContainer && pot.container)
-            ? (pWorldX - pot.x)
-            : pWorldX;
-        const localStartY = (targetContainer !== this.game.mainContainer && pot.container)
-            ? (pWorldY - pot.y)
-            : pWorldY;
-        const localTargetX = (targetContainer !== this.game.mainContainer) ? clampedTargetX : (potWorldX + clampedTargetX);
-        const localTargetY = (targetContainer !== this.game.mainContainer) ? clampedTargetY : (pot.y + clampedTargetY);
+        const localStartX = pWorldX - this.conveyorComp.x;
+        const localStartY = pWorldY - this.conveyorComp.y;
+        const localTargetX = (potWorldX + clampedTargetX) - this.conveyorComp.x;
+        const localTargetY = (pot.y + clampedTargetY) - this.conveyorComp.y;
 
         const targetConveyorScale = (this.game.SETTINGS && this.game.SETTINGS.conveyor_particle_scale !== undefined)
             ? this.game.SETTINGS.conveyor_particle_scale
@@ -898,9 +875,10 @@ export class ConveyorSystem extends System {
                         const halfSize = pSize * 0.5;
 
                         // Constrain falling particles strictly to the visual aperture width
-                        const startX = Math.max(spoutLeftX + halfSize, Math.min(spoutRightX - halfSize, item.logicalX));
-                        const startY = item.logicalY;
-                        const targetY = beltLogicalY - 2;
+                        // Convert to conveyor local coordinates
+                        const startX = Math.max(spoutLeftX + halfSize, Math.min(spoutRightX - halfSize, item.logicalX)) - conveyor.x;
+                        const startY = item.logicalY - conveyor.y;
+                        const targetY = (beltLogicalY - 2) - conveyor.y;
 
                         // If already at or past the belt surface, add directly without falling animation
                         if (startY >= targetY - 4) {
@@ -915,7 +893,7 @@ export class ConveyorSystem extends System {
 
                         // Keep the falling stream cohesive and strictly within the visual aperture
                         const streamJitter = (Math.random() * 4 - 2);
-                        const targetX = Math.max(spoutLeftX + halfSize, Math.min(spoutRightX - halfSize, startX + streamJitter));
+                        const targetX = Math.max(spoutLeftX + halfSize, Math.min(spoutRightX - halfSize, item.logicalX + streamJitter)) - conveyor.x;
 
                         const darkColor = ((r >> 1) << 16) | ((g >> 1) << 8) | (b >> 1);
                         const targetConveyorScale = (this.game.SETTINGS && this.game.SETTINGS.conveyor_particle_scale !== undefined)
