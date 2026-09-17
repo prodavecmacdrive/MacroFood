@@ -1908,8 +1908,7 @@ export class SandGridComponent {
                                                         ? ((px < funnelCenter) ? 1 : -1)
                                                         : ((diffX > 0.4) ? 1 : ((diffX < -0.4) ? -1 : ((px >= funnelCenter) ? -1 : 1)));
                                                     // Full firm non-penetrating separation from resting particle
-                                                    px += normX * overlap * 1.02;
-                                                    py += normY * overlap * 1.02;
+
                                                     // Smooth inertial roll acceleration scaled by sideBoost or fullConveyorSpeedScale
                                                     const sideBoost = getSideBoost(px);
                                                     const fullScale = isConveyorFull ? fullConveyorSpeedScale : 1.0;
@@ -1971,8 +1970,7 @@ export class SandGridComponent {
                                                         const inDeadZone = checkParabolaDeadZone(px, py, p);
                                                         if (inDeadZone) {
                                                             // Inside dead zone: firm non-penetrating separation and gentle roll scaled down as particle stabilizes
-                                                            px += normX * overlap * 1.02;
-                                                            py += normY * overlap * 1.02;
+
                                                             const curTimer = this.deadZoneTimer ? this.deadZoneTimer[p] : 0;
                                                             const decelProgress = Math.min(1.0, curTimer / decelDuration);
                                                             const moundY = (px < funnelCenter) ? effectiveLeftMoundY : effectiveRightMoundY;
@@ -1999,8 +1997,7 @@ export class SandGridComponent {
                                                             vy[p] = Math.min(targetRollVy, vy[p] + rollVyAccel);
                                                         } else if (Math.abs(normX) < 0.70) {
                                                             // Outside dead zone: smooth roll down slope of heap with full separation out of resting particle
-                                                            px += normX * overlap * 1.02;
-                                                            py += normY * overlap * 1.02;
+
                                                             const effSlide = Math.max(slideSpeed, 30) * Math.max(0.35, sideBoost);
                                                             const targetRollVx = rollDir * effSlide * 0.85;
                                                             const rollAccel = Math.max(140, effSlide * 2.5) * subDt;
