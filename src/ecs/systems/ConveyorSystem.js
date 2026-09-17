@@ -71,16 +71,34 @@ export class ConveyorSystem extends System {
                     const half = size * 0.5;
                     let cx = tr.curX;
                     let cy = tr.curY;
-                    g.save();
-                    g.translate(cx, cy);
-                    g.rotate(tr.currentRotation || 0);
+                    const angle = tr.currentRotation || 0;
+                    const cosA = Math.cos(angle);
+                    const sinA = Math.sin(angle);
 
+                    // Helper to rotate a point
+                    const rotX = (px, py) => cx + px * cosA - py * sinA;
+                    const rotY = (px, py) => cy + px * sinA + py * cosA;
+
+                    // Draw dark half (bottom: x from -half to half, y from 0 to half)
                     g.fillStyle(darkColor, 1);
-                    g.fillRect(-half, 0, size, half);
-                    g.fillStyle(dropColor, 1);
-                    g.fillRect(-half, -half, size, half);
+                    g.beginPath();
+                    g.moveTo(rotX(-half, 0), rotY(-half, 0));
+                    g.lineTo(rotX(-half + size, 0), rotY(-half + size, 0));
+                    g.lineTo(rotX(-half + size, half), rotY(-half + size, half));
+                    g.lineTo(rotX(-half, half), rotY(-half, half));
+                    g.closePath();
+                    g.fillPath();
 
-                    g.restore();
+                    // Draw bright half (top: x from -half to half, y from -half to 0)
+                    g.fillStyle(dropColor, 1);
+                    g.beginPath();
+                    g.moveTo(rotX(-half, -half), rotY(-half, -half));
+                    g.lineTo(rotX(-half + size, -half), rotY(-half + size, -half));
+                    g.lineTo(rotX(-half + size, 0), rotY(-half + size, 0));
+                    g.lineTo(rotX(-half, 0), rotY(-half, 0));
+                    g.closePath();
+                    g.fillPath();
+
 
 
                 }
