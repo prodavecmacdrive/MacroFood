@@ -1074,27 +1074,20 @@ export class SandGridComponent {
                 rightPileY = rightAbovePileY;
             }
 
-            // "The Parabola should slowly and inexorably decrease."
-            // Ensure the reported mound height NEVER bounces back up (Y value gets smaller) when draining
             if (!isConveyorFull) {
-                if (this._highestLeftPileY === undefined) this._highestLeftPileY = leftPileY;
-                if (this._highestRightPileY === undefined) this._highestRightPileY = rightPileY;
+                if (this._maxLeftPileY === undefined) this._maxLeftPileY = leftPileY;
+                if (this._maxRightPileY === undefined) this._maxRightPileY = rightPileY;
 
-                // Once it starts crumbling down (Y increases), never let it bounce back up
-                leftPileY = Math.max(leftPileY, this._highestLeftPileY);
-                rightPileY = Math.max(rightPileY, this._highestRightPileY);
+                // When draining, the pile can ONLY go downwards (Y increases).
+                // It can NEVER go back upwards (Y decreases).
+                this._maxLeftPileY = Math.max(this._maxLeftPileY, leftPileY);
+                this._maxRightPileY = Math.max(this._maxRightPileY, rightPileY);
 
-                this._highestLeftPileY = leftPileY;
-                this._highestRightPileY = rightPileY;
-
-                // Also force Parabola ratio to inexorably decrease
-                this.leftParabolaRatio = Math.max(0.15, this.leftParabolaRatio - 0.05);
-                this.rightParabolaRatio = Math.max(0.15, this.rightParabolaRatio - 0.05);
-                movingOnLeft = 0; // Bypass the dynamic increasing bounce-back below
-                movingOnRight = 0;
+                leftPileY = this._maxLeftPileY;
+                rightPileY = this._maxRightPileY;
             } else {
-                this._highestLeftPileY = undefined;
-                this._highestRightPileY = undefined;
+                this._maxLeftPileY = undefined;
+                this._maxRightPileY = undefined;
             }
 
             // Ratio adjustment:
@@ -1102,18 +1095,24 @@ export class SandGridComponent {
                 // When conveyor is 100% full, restore full ratio immediately to hold sand
                 this.leftParabolaRatio = maxParabolaRatio;
                 this.rightParabolaRatio = maxParabolaRatio;
+                this._maxLeftParabolaRatio = maxParabolaRatio;
+                this._maxRightParabolaRatio = maxParabolaRatio;
             } else {
-                if (movingOnLeft < 2) {
-                    this.leftParabolaRatio = Math.max(0.15, this.leftParabolaRatio - 0.03);
-                } else {
-                    this.leftParabolaRatio = Math.min(maxParabolaRatio, this.leftParabolaRatio + 0.05);
-                }
+                // When draining, parabola can only decrease, never increase (never bounce back)
+                // Determine base ratio decrease (0.01 to 0.03 based on physics time)
+                const ratioDrop = 0.015;
+                this.leftParabolaRatio -= ratioDrop;
+                this.rightParabolaRatio -= ratioDrop;
 
-                if (movingOnRight < 2) {
-                    this.rightParabolaRatio = Math.max(0.15, this.rightParabolaRatio - 0.03);
-                } else {
-                    this.rightParabolaRatio = Math.min(maxParabolaRatio, this.rightParabolaRatio + 0.05);
-                }
+                // Enforce strict monotonically decreasing ratio
+                if (this._maxLeftParabolaRatio === undefined) this._maxLeftParabolaRatio = this.leftParabolaRatio;
+                if (this._maxRightParabolaRatio === undefined) this._maxRightParabolaRatio = this.rightParabolaRatio;
+
+                this._maxLeftParabolaRatio = Math.min(this._maxLeftParabolaRatio, this.leftParabolaRatio);
+                this._maxRightParabolaRatio = Math.min(this._maxRightParabolaRatio, this.rightParabolaRatio);
+
+                this.leftParabolaRatio = this._maxLeftParabolaRatio;
+                this.rightParabolaRatio = this._maxRightParabolaRatio;
             }
 
             this.leftParabolaRatio = Math.min(maxParabolaRatio, Math.max(0.15, this.leftParabolaRatio));
@@ -1122,8 +1121,23 @@ export class SandGridComponent {
             const leftHillHeight = Math.max(0, funnelBottomY - leftPileY);
             const rightHillHeight = Math.max(0, funnelBottomY - rightPileY);
 
-            const targetLeftHeight = Math.max(0, leftHillHeight * this.leftParabolaRatio);
-            const targetRightHeight = Math.max(0, rightHillHeight * this.rightParabolaRatio);
+            let targetLeftHeight = Math.max(0, leftHillHeight * this.leftParabolaRatio);
+            let targetRightHeight = Math.max(0, rightHillHeight * this.rightParabolaRatio);
+
+            if (!isConveyorFull) {
+                if (this._maxTargetLeftHeight === undefined) this._maxTargetLeftHeight = targetLeftHeight;
+                if (this._maxTargetRightHeight === undefined) this._maxTargetRightHeight = targetRightHeight;
+
+                // Target height MUST inexorably decrease
+                this._maxTargetLeftHeight = Math.min(this._maxTargetLeftHeight, targetLeftHeight);
+                this._maxTargetRightHeight = Math.min(this._maxTargetRightHeight, targetRightHeight);
+
+                targetLeftHeight = this._maxTargetLeftHeight;
+                targetRightHeight = this._maxTargetRightHeight;
+            } else {
+                this._maxTargetLeftHeight = undefined;
+                this._maxTargetRightHeight = undefined;
+            }
 
             if (this.currentLeftParabolaHeight === undefined) {
                 this.currentLeftParabolaHeight = targetLeftHeight;
@@ -1163,7 +1177,12 @@ export class SandGridComponent {
                 this.currentRightParabolaHeight = targetRightHeight;
             } else {
                 if (targetLeftHeight > this.currentLeftParabolaHeight + 0.5) {
-                    this.currentLeftParabolaHeight = Math.min(targetLeftHeight, this.currentLeftParabolaHeight + riseRate * evalDt);
+                    if (!isConveyorFull) {
+                         // Conveyor not full: PREVENT ANY BOUNCE BACK OR RISE
+                         this.currentLeftParabolaHeight = targetLeftHeight;
+                    } else {
+                         this.currentLeftParabolaHeight = Math.min(targetLeftHeight, this.currentLeftParabolaHeight + riseRate * evalDt);
+                    }
                 } else if (targetLeftHeight < this.currentLeftParabolaHeight - 0.5) {
                     const diffL = this.currentLeftParabolaHeight - targetLeftHeight;
                     const effDescendL = Math.max(descendRate, diffL * 3.0);
@@ -1171,11 +1190,15 @@ export class SandGridComponent {
                 } else if (isLeftFuseTriggered) {
                     // Fuse triggered: forcibly and slowly decrease parabola height until natural algorithm descent takes over
                     this.currentLeftParabolaHeight = Math.max(0, this.currentLeftParabolaHeight - fuseDescendRate * evalDt);
-                    this.leftParabolaRatio = Math.max(0.15, this.leftParabolaRatio - 0.02 * (evalDt / 0.16));
                 }
 
                 if (targetRightHeight > this.currentRightParabolaHeight + 0.5) {
-                    this.currentRightParabolaHeight = Math.min(targetRightHeight, this.currentRightParabolaHeight + riseRate * evalDt);
+                    if (!isConveyorFull) {
+                         // Conveyor not full: PREVENT ANY BOUNCE BACK OR RISE
+                         this.currentRightParabolaHeight = targetRightHeight;
+                    } else {
+                         this.currentRightParabolaHeight = Math.min(targetRightHeight, this.currentRightParabolaHeight + riseRate * evalDt);
+                    }
                 } else if (targetRightHeight < this.currentRightParabolaHeight - 0.5) {
                     const diffR = this.currentRightParabolaHeight - targetRightHeight;
                     const effDescendR = Math.max(descendRate, diffR * 3.0);
@@ -1183,7 +1206,6 @@ export class SandGridComponent {
                 } else if (isRightFuseTriggered) {
                     // Fuse triggered: forcibly and slowly decrease parabola height until natural algorithm descent takes over
                     this.currentRightParabolaHeight = Math.max(0, this.currentRightParabolaHeight - fuseDescendRate * evalDt);
-                    this.rightParabolaRatio = Math.max(0.15, this.rightParabolaRatio - 0.02 * (evalDt / 0.16));
                 }
             }
 
