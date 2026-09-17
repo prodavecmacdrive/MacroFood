@@ -71,16 +71,26 @@ export class ConveyorSystem extends System {
                     const half = size * 0.5;
                     let cx = tr.curX;
                     let cy = tr.curY;
-                    g.save();
-                    g.translate(cx, cy);
-                    g.rotate(tr.currentRotation || 0);
+                    const angle = tr.currentRotation || 0;
+                    const cos = Math.cos(angle);
+                    const sin = Math.sin(angle);
+
+                    // Top rectangle (-half, -half, size, half) centered relative to (cx, cy)
+                    const topLocalX = 0;
+                    const topLocalY = -half / 2;
+                    const topX = cx + (topLocalX * cos - topLocalY * sin);
+                    const topY = cy + (topLocalX * sin + topLocalY * cos);
+
+                    // Bottom rectangle (-half, 0, size, half) centered relative to (cx, cy)
+                    const botLocalX = 0;
+                    const botLocalY = half / 2;
+                    const botX = cx + (botLocalX * cos - botLocalY * sin);
+                    const botY = cy + (botLocalX * sin + botLocalY * cos);
 
                     g.fillStyle(darkColor, 1);
-                    g.fillRect(-half, 0, size, half);
+                    g.fillRect(botX - half, botY - half / 2, size, half);
                     g.fillStyle(dropColor, 1);
-                    g.fillRect(-half, -half, size, half);
-
-                    g.restore();
+                    g.fillRect(topX - half, topY - half / 2, size, half);
 
 
                 }
