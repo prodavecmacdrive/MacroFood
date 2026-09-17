@@ -1074,6 +1074,29 @@ export class SandGridComponent {
                 rightPileY = rightAbovePileY;
             }
 
+            // "The Parabola should slowly and inexorably decrease."
+            // Ensure the reported mound height NEVER bounces back up (Y value gets smaller) when draining
+            if (!isConveyorFull) {
+                if (this._highestLeftPileY === undefined) this._highestLeftPileY = leftPileY;
+                if (this._highestRightPileY === undefined) this._highestRightPileY = rightPileY;
+
+                // Once it starts crumbling down (Y increases), never let it bounce back up
+                leftPileY = Math.max(leftPileY, this._highestLeftPileY);
+                rightPileY = Math.max(rightPileY, this._highestRightPileY);
+
+                this._highestLeftPileY = leftPileY;
+                this._highestRightPileY = rightPileY;
+
+                // Also force Parabola ratio to inexorably decrease
+                this.leftParabolaRatio = Math.max(0.15, this.leftParabolaRatio - 0.05);
+                this.rightParabolaRatio = Math.max(0.15, this.rightParabolaRatio - 0.05);
+                movingOnLeft = 0; // Bypass the dynamic increasing bounce-back below
+                movingOnRight = 0;
+            } else {
+                this._highestLeftPileY = undefined;
+                this._highestRightPileY = undefined;
+            }
+
             // Ratio adjustment:
             if (isConveyorFull) {
                 // When conveyor is 100% full, restore full ratio immediately to hold sand
