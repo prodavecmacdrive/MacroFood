@@ -1908,8 +1908,8 @@ export class SandGridComponent {
                                                         ? ((px < funnelCenter) ? 1 : -1)
                                                         : ((diffX > 0.4) ? 1 : ((diffX < -0.4) ? -1 : ((px >= funnelCenter) ? -1 : 1)));
                                                     // Full firm non-penetrating separation from resting particle
-                                                    px += normX * overlap * 1.02;
-                                                    py += normY * overlap * 1.02;
+                                                    px += normX * overlap * 1.0;
+                                                    py += normY * overlap * 1.0;
                                                     // Smooth inertial roll acceleration scaled by sideBoost or fullConveyorSpeedScale
                                                     const sideBoost = getSideBoost(px);
                                                     const fullScale = isConveyorFull ? fullConveyorSpeedScale : 1.0;
@@ -1943,7 +1943,8 @@ export class SandGridComponent {
                                                         let ox = positions[other * 2 + 0] * imageScale + imgX;
                                                         let oy = positions[other * 2 + 1] * imageScale + imgY;
                                                         const _otherNotInDZ = !checkParabolaDeadZone(ox, oy, other);
-                                                        if (_otherNotInDZ) {
+                                                        const sideParabolaActive = (px < funnelCenter) ? isLeftParabolaActive : isRightParabolaActive;
+                                                        if (_otherNotInDZ && sideParabolaActive) {
                                                             this.states[other] = STATE_ACTIVE;
                                                             this.stationaryFrames[other] = 0;
                                                         }
@@ -1971,8 +1972,8 @@ export class SandGridComponent {
                                                         const inDeadZone = checkParabolaDeadZone(px, py, p);
                                                         if (inDeadZone) {
                                                             // Inside dead zone: firm non-penetrating separation and gentle roll scaled down as particle stabilizes
-                                                            px += normX * overlap * 1.02;
-                                                            py += normY * overlap * 1.02;
+                                                            px += normX * overlap * 1.0;
+                                                            py += normY * overlap * 1.0;
                                                             const curTimer = this.deadZoneTimer ? this.deadZoneTimer[p] : 0;
                                                             const decelProgress = Math.min(1.0, curTimer / decelDuration);
                                                             const moundY = (px < funnelCenter) ? effectiveLeftMoundY : effectiveRightMoundY;
@@ -1999,8 +2000,8 @@ export class SandGridComponent {
                                                             vy[p] = Math.min(targetRollVy, vy[p] + rollVyAccel);
                                                         } else if (Math.abs(normX) < 0.70) {
                                                             // Outside dead zone: smooth roll down slope of heap with full separation out of resting particle
-                                                            px += normX * overlap * 1.02;
-                                                            py += normY * overlap * 1.02;
+                                                            px += normX * overlap * 1.0;
+                                                            py += normY * overlap * 1.0;
                                                             const effSlide = Math.max(slideSpeed, 30) * Math.max(0.35, sideBoost);
                                                             const targetRollVx = rollDir * effSlide * 0.85;
                                                             const rollAccel = Math.max(140, effSlide * 2.5) * subDt;
@@ -2064,7 +2065,7 @@ export class SandGridComponent {
                                                 }
 
                                                 // Firm, non-penetrating separation (102% eliminates multi-particle compression)
-                                                const sepFactor = 1.02;
+                                                const sepFactor = 1.0;
                                                 px += normX * overlap * ratioP * sepFactor;
                                                 py += normY * overlap * ratioP * sepFactor;
                                                 ox -= normX * overlap * ratioO * sepFactor;
@@ -2091,12 +2092,12 @@ export class SandGridComponent {
                                                 // Only apply lateral dispersion kicks to free-flowing particles outside the wall boundary zone and above the mound
                                                 if (!isWallZone && Math.abs(normX) < 0.40 && maxStab < 0.30) {
                                                     if (py < moundPeakY - 25) {
-                                                        const kickMag = 35 + slideProgression * 35;
+                                                        const kickMag = 0;
                                                         const sDir = (diffX >= 0 || (p % 2 === 0)) ? 1 : -1;
                                                         vx[p] += sDir * kickMag;
                                                         vx[other] -= sDir * kickMag;
-                                                        px += sDir * 0.8;
-                                                        ox -= sDir * 0.8;
+                                                        px += sDir * 0.0;
+                                                        ox -= sDir * 0.0;
                                                     } else if (py >= funnelTopY) {
                                                         // In the funnel chute: smoothly steer particles inward toward the center spout only when suction is active
                                                         if (isSuctionActive) {
