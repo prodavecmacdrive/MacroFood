@@ -11,7 +11,6 @@ export class ConveyorSystem extends System {
             'to_cup_6', 'to_cup_7', 'to_cup_8', 'to_cup_9', 'to_cup_10'
         ];
         this.lastToCupSoundTime = 0;
-        this.dropGfxPool = [];
         this.activeSpoutDrops = [];
         this.activeCupTransfers = [];
         this.pendingSpoutQueue = [];
@@ -34,7 +33,63 @@ export class ConveyorSystem extends System {
 
         const effectiveSize = pSize * targetConveyorScale;
         const effectiveHalf = effectiveSize * 0.5;
+        // Draw activeSpoutDrops
+        if (this.activeSpoutDrops && this.activeSpoutDrops.length > 0) {
+            for (let i = 0; i < this.activeSpoutDrops.length; i++) {
+                const drop = this.activeSpoutDrops[i];
+                if (drop.curX !== undefined && drop.curY !== undefined) {
+                    const r = (drop.colorHex >> 16) & 0xFF;
+                    const gCol = (drop.colorHex >> 8) & 0xFF;
+                    const b = drop.colorHex & 0xFF;
+                    const darkColor = ((r >> 1) << 16) | ((gCol >> 1) << 8) | (b >> 1);
 
+                    const pScale = drop.curScale || 1.6;
+                    const size = pSize * pScale;
+                    const half = size * 0.5;
+
+                    g.fillStyle(darkColor, 1);
+                    g.fillRect(drop.curX - half, drop.curY, size, half);
+                    g.fillStyle(drop.colorHex, 1);
+                    g.fillRect(drop.curX - half, drop.curY - half, size, half);
+                }
+            }
+        }
+
+        // Draw activeCupTransfers
+        if (this.activeCupTransfers && this.activeCupTransfers.length > 0) {
+            for (let i = 0; i < this.activeCupTransfers.length; i++) {
+                const tr = this.activeCupTransfers[i];
+                if (tr.curX !== undefined && tr.curY !== undefined) {
+                    const dropColor = tr.colorHex;
+                    const r = (dropColor >> 16) & 0xFF;
+                    const gCol = (dropColor >> 8) & 0xFF;
+                    const b = dropColor & 0xFF;
+                    const darkColor = ((r >> 1) << 16) | ((gCol >> 1) << 8) | (b >> 1);
+
+                    const pScale = tr.currentScale || 1.6;
+                    const size = pSize * pScale;
+                    const half = size * 0.5;
+
+                    g.save();
+
+                    if (tr.targetContainer && tr.targetContainer.active && tr.targetContainer !== this.game.mainContainer) {
+                        g.translate(tr.targetContainer.x, tr.targetContainer.y);
+                    }
+                    g.translate(tr.curX, tr.curY);
+                    g.rotate(tr.currentRotation || 0);
+
+                    g.fillStyle(darkColor, 1);
+                    g.fillRect(-half, 0, size, half);
+                    g.fillStyle(dropColor, 1);
+                    g.fillRect(-half, -half, size, half);
+
+                    g.restore();
+                }
+            }
+        }
+
+        // Segment batching for top belt
+        let currentSegment = null;
         for (let i = 0; i < beltParticles.length; i++) {
             const bp = beltParticles[i];
             const colorHex = bp.colorHex !== undefined ? bp.colorHex : bp.color;
@@ -43,15 +98,40 @@ export class ConveyorSystem extends System {
             const b = colorHex & 0xFF;
             const darkColor = ((r >> 1) << 16) | ((gCol >> 1) << 8) | (b >> 1);
 
-            // Draw volume shadow (bottom half)
-            g.fillStyle(darkColor, 1);
-            g.fillRect(bp.x - effectiveHalf, bp.y, effectiveSize, effectiveHalf);
-
-            // Draw particle face (top half)
-            g.fillStyle(colorHex, 1);
-            g.fillRect(bp.x - effectiveHalf, bp.y - effectiveHalf, effectiveSize, effectiveHalf);
+            if (bp.state === 'top') {
+                if (currentSegment && currentSegment.colorHex === colorHex && Math.abs(bp.y - currentSegment.y) < 2 && Math.abs(currentSegment.right - bp.x) <= effectiveSize * 1.5) {
+                    currentSegment.right = bp.x;
+                    currentSegment.width = currentSegment.right - currentSegment.x + effectiveSize;
+                } else {
+                    if (currentSegment) {
+                        g.fillStyle(currentSegment.darkColor, 1);
+                        g.fillRect(currentSegment.x - effectiveHalf, currentSegment.y, currentSegment.width, effectiveHalf);
+                        g.fillStyle(currentSegment.colorHex, 1);
+                        g.fillRect(currentSegment.x - effectiveHalf, currentSegment.y - effectiveHalf, currentSegment.width, effectiveHalf);
+                    }
+                    currentSegment = {
+                        colorHex: colorHex,
+                        darkColor: darkColor,
+                        x: bp.x,
+                        y: bp.y,
+                        right: bp.x,
+                        width: effectiveSize
+                    };
+                }
+            } else {
+                g.fillStyle(darkColor, 1);
+                g.fillRect(bp.x - effectiveHalf, bp.y, effectiveSize, effectiveHalf);
+                g.fillStyle(colorHex, 1);
+                g.fillRect(bp.x - effectiveHalf, bp.y - effectiveHalf, effectiveSize, effectiveHalf);
+            }
         }
-    }
+        if (currentSegment) {
+            g.fillStyle(currentSegment.darkColor, 1);
+            g.fillRect(currentSegment.x - effectiveHalf, currentSegment.y, currentSegment.width, effectiveHalf);
+            g.fillStyle(currentSegment.colorHex, 1);
+            g.fillRect(currentSegment.x - effectiveHalf, currentSegment.y - effectiveHalf, currentSegment.width, effectiveHalf);
+        }
+}
 
     playToCupSound(baseVolume = 0.55) {
         const settings = (this.game && this.game.SETTINGS) || {};
@@ -484,32 +564,18 @@ export class ConveyorSystem extends System {
         const finalCupScale = targetConveyorScale * cupScaleMult;
         const peakScale = finalCupScale * 1.15;
 
-        let dropGfx = this.dropGfxPool.pop();
-        if (!dropGfx) {
-            dropGfx = this.game.add.graphics();
-        } else {
-            dropGfx.clear();
-            dropGfx.setVisible(true);
-        }
-        dropGfx.fillStyle(darkColor, 1);
-        dropGfx.fillRect(-halfSize, halfSize, pSize, pSize);
-        dropGfx.fillStyle(dropColor, 1);
-        dropGfx.fillRect(-halfSize, -halfSize, pSize, pSize);
-        dropGfx.setPosition(localStartX, localStartY);
-        dropGfx.setScale(startScale);
-        targetContainer.add(dropGfx);
-
-        const travelDuration = 512;
-        const arcPeakHeight = settings.conveyor_to_cup_arc_height !== undefined ? settings.conveyor_to_cup_arc_height : 98;
+        const travelDuration = Math.max(250, 400 - (fillRatio * 150));
         const p0x = localStartX;
         const p0y = localStartY;
+        const arcPeakHeight = 60 * sizeRatio;
         const p2x = localTargetX;
         const p2y = localTargetY;
         const p1x = (p0x + p2x) / 2;
         const p1y = Math.min(p0y, p2y) - arcPeakHeight;
 
         this.activeCupTransfers.push({
-            dropGfx,
+            colorHex: dropColor,
+            targetContainer,
             p0x, p0y,
             p1x, p1y,
             p2x, p2y,
@@ -548,10 +614,7 @@ export class ConveyorSystem extends System {
                     if (drop.delaySec > 0) {
                         continue; // Waiting for staggered play delay within batch
                     }
-                    if (drop.gfx && drop.gfx.active) {
-                        drop.gfx.setVisible(true);
                     }
-                }
                 drop.elapsedSec += dt;
                 const progress = Math.min(1.0, drop.elapsedSec / drop.durationSec);
                 const easeT = progress * progress; // Quad easeIn
@@ -560,16 +623,12 @@ export class ConveyorSystem extends System {
                 const curY = drop.startY + (drop.targetY - drop.startY) * easeT;
                 const curScale = 1.0 + (drop.targetScale - 1.0) * easeT;
 
-                if (drop.gfx && drop.gfx.active) {
-                    drop.gfx.setPosition(curX, curY);
-                    drop.gfx.setScale(curScale);
-                }
+                drop.curX = curX;
+                drop.curY = curY;
+                drop.curScale = curScale;
 
                 if (progress >= 1.0) {
-                    if (drop.gfx && drop.gfx.active) {
-                        drop.gfx.setVisible(false);
-                        this.dropGfxPool.push(drop.gfx);
-                    }
+
                     if (conveyor.beltParticles) {
                         this.addParticleToConveyor(conveyor, drop.targetX, drop.colorInt, drop.colorHex);
                     }
@@ -601,18 +660,13 @@ export class ConveyorSystem extends System {
                     currentScale = tr.peakScale - (tr.peakScale - tr.finalCupScale) * subT;
                 }
 
-                if (tr.dropGfx && tr.dropGfx.active) {
-                    tr.dropGfx.setPosition(curX, curY);
-                    tr.dropGfx.setRotation(tr.randomAngle * easeT);
-                    tr.dropGfx.setScale(currentScale);
-                }
+                tr.curX = curX;
+                tr.curY = curY;
+                tr.currentScale = currentScale;
+                tr.currentRotation = tr.randomAngle * easeT;
 
                 if (t >= 1.0) {
-                    if (tr.dropGfx && tr.dropGfx.active) {
-                        tr.dropGfx.setPosition(tr.p2x, tr.p2y);
-                        tr.dropGfx.setRotation(tr.randomAngle);
-                        tr.dropGfx.setScale(tr.finalCupScale);
-                    }
+
                     this.activeCupTransfers.splice(i, 1);
                 }
             }
@@ -848,27 +902,9 @@ export class ConveyorSystem extends System {
                             ? this.game.SETTINGS.conveyor_particle_scale
                             : 1.6;
 
-                        // Acquire pooled graphics object or create new if pool empty
-                        let dropGfx = this.dropGfxPool.pop();
-                        if (!dropGfx) {
-                            dropGfx = this.game.add.graphics();
-                        } else {
-                            dropGfx.clear();
-                        }
-                        dropGfx.setVisible(true);
-                        dropGfx.fillStyle(darkColor, 1);
-                        dropGfx.fillRect(-halfSize, halfSize, pSize, pSize);
-                        dropGfx.fillStyle(colorHex, 1);
-                        dropGfx.fillRect(-halfSize, -halfSize, pSize, pSize);
-                        dropGfx.setPosition(startX, startY);
-                        dropGfx.setScale(1.0);
-                        dropGfx.setDepth(4); // Behind white funnel frame (depth 5)
-                        if (dropGfx.parent !== this.game.mainContainer) {
-                            this.game.mainContainer.add(dropGfx);
-                        }
+
 
                         this.activeSpoutDrops.push({
-                            gfx: dropGfx,
                             startX,
                             startY,
                             targetX,
