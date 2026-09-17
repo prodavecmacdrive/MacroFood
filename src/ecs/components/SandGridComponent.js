@@ -1554,7 +1554,7 @@ export class SandGridComponent {
         // Sub-stepped physics simulation: more iterations = better solver convergence against walls.
         // 4 sub-steps provide sufficient numerical stability with CCD velocity clamping already in place;
         // tunable via physics_sub_steps in game-settings.json (default 4).
-        const subSteps = settings.physics_sub_steps !== undefined ? settings.physics_sub_steps : 4;
+        const subSteps = settings.physics_sub_steps !== undefined ? settings.physics_sub_steps : 2;
         const subDt = dt / subSteps;
         const dtScale = dt / 0.0166666;
 

@@ -166,5 +166,6 @@
         "phase5_duration_ms": 350
     },
     "idle_particle_threshold": 20,
-    "idle_time_seconds": 0.1
+    "idle_time_seconds": 0.1,
+    "physics_sub_steps": 2
 }
