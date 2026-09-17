@@ -105,8 +105,19 @@ export class ConveyorSystem extends System {
             }
         }
 
-        // Segment batching for top belt
+        // Segment batching for top and bottom belt
         let currentSegment = null;
+        const flushSegment = () => {
+            if (currentSegment) {
+                const drawX = Math.min(currentSegment.x, currentSegment.right);
+                g.fillStyle(currentSegment.darkColor, 1);
+                g.fillRect(drawX - effectiveHalf, currentSegment.y, currentSegment.width, effectiveHalf);
+                g.fillStyle(currentSegment.colorHex, 1);
+                g.fillRect(drawX - effectiveHalf, currentSegment.y - effectiveHalf, currentSegment.width, effectiveHalf);
+                currentSegment = null;
+            }
+        };
+
         for (let i = 0; i < beltParticles.length; i++) {
             const bp = beltParticles[i];
             const colorHex = bp.colorHex !== undefined ? bp.colorHex : bp.color;
@@ -115,18 +126,14 @@ export class ConveyorSystem extends System {
             const b = colorHex & 0xFF;
             const darkColor = ((r >> 1) << 16) | ((gCol >> 1) << 8) | (b >> 1);
 
-            if (bp.state === 'top') {
-                if (currentSegment && currentSegment.colorHex === colorHex && Math.abs(bp.y - currentSegment.y) < 2 && Math.abs(currentSegment.right - bp.x) <= effectiveSize * 1.5) {
+            if (bp.state === 'top' || bp.state === 'bottom') {
+                if (currentSegment && currentSegment.state === bp.state && currentSegment.colorHex === colorHex && Math.abs(bp.y - currentSegment.y) < 2 && Math.abs(currentSegment.right - bp.x) <= effectiveSize * 1.5) {
                     currentSegment.right = bp.x;
-                    currentSegment.width = currentSegment.right - currentSegment.x + effectiveSize;
+                    currentSegment.width = Math.abs(currentSegment.right - currentSegment.x) + effectiveSize;
                 } else {
-                    if (currentSegment) {
-                        g.fillStyle(currentSegment.darkColor, 1);
-                        g.fillRect(currentSegment.x - effectiveHalf, currentSegment.y, currentSegment.width, effectiveHalf);
-                        g.fillStyle(currentSegment.colorHex, 1);
-                        g.fillRect(currentSegment.x - effectiveHalf, currentSegment.y - effectiveHalf, currentSegment.width, effectiveHalf);
-                    }
+                    flushSegment();
                     currentSegment = {
+                        state: bp.state,
                         colorHex: colorHex,
                         darkColor: darkColor,
                         x: bp.x,
@@ -136,18 +143,14 @@ export class ConveyorSystem extends System {
                     };
                 }
             } else {
+                flushSegment();
                 g.fillStyle(darkColor, 1);
                 g.fillRect(bp.x - effectiveHalf, bp.y, effectiveSize, effectiveHalf);
                 g.fillStyle(colorHex, 1);
                 g.fillRect(bp.x - effectiveHalf, bp.y - effectiveHalf, effectiveSize, effectiveHalf);
             }
         }
-        if (currentSegment) {
-            g.fillStyle(currentSegment.darkColor, 1);
-            g.fillRect(currentSegment.x - effectiveHalf, currentSegment.y, currentSegment.width, effectiveHalf);
-            g.fillStyle(currentSegment.colorHex, 1);
-            g.fillRect(currentSegment.x - effectiveHalf, currentSegment.y - effectiveHalf, currentSegment.width, effectiveHalf);
-        }
+        flushSegment();
 }
 
     playToCupSound(baseVolume = 0.55) {

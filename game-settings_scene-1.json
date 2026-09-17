@@ -167,5 +167,5 @@
     },
     "idle_particle_threshold": 20,
     "idle_time_seconds": 0.1,
-    "physics_sub_steps": 2
+    "physics_sub_steps": 1
 }
